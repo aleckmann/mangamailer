@@ -7,11 +7,11 @@ from requests import get
 from bs4 import BeautifulSoup as soup
 
 #clear logfile
-with open('debug.log','w'):
+with open('debug.log','w') as f:
   pass
 
 EMAIL_CRED_FILEPATH = "./data/emailcreds.json"
-LOGGER_LEVEL = logging.INFO
+LOGGER_LEVEL = logging.DEBUG
 
 manga_data = {
               'bnh':  {'base_url':'https://w10.readheroacademia.com/',
@@ -48,52 +48,67 @@ def get_volumes(code,latest_only=False,starting_at=0):
 
   logging.debug("returning {} volume".format("latest" if latest_only else "every"))
   logging.info("leaving get_volumes")
+
   return volumes[0] if latest_only else volumes
 
 def isBookmark(url):
 
-  #pull page
+  logging.info("checking if page is bookmark")
+
+  logging.debug("getting page data")
   volume_page_data = soup(get(url['href'])._content, 'html.parser')
+  logging.debug("got page data")
 
   #every page has entry-content block, only bookmark page has h2
   bookmark_block = volume_page_data.find('div','entry-content').h2
 
+  logging.info("page {} a bookmark".format("is" if bool(bookmark_block) else "is not"))
   #variable will have a value i.e. be True if it's a bookmark
   return bool(bookmark_block)
 
 def getEmailCreds(credfile):
-  creds = json.load(open(credfile,'r'))
-  return creds['email'],creds['password']
+  logging.info("retrieving email creds")
 
+  creds = json.load(open(credfile,'r'))
+
+  logging.info("successfully retrieved email creds")
+
+  return creds['email'],creds['password']
 
 if __name__ == "__main__":
   #init parser
   parser = argparse.ArgumentParser()
+
   #add args
   parser.add_argument("code",help="code of manga, e.g. bnh-Boku No Hero")
   parser.add_argument("--volume","--v",help="last volume of said manga you've read", type=int)
   parser.add_argument("--latestonly",help="get only the latest volume of the specified manga",action="store_true")
   args = parser.parse_args()
-  
+
+  email,password = getEmailCreds(EMAIL_CRED_FILEPATH)
+
   #get only the latest volume
   if args.latestonly:
+    logging.info("returning latest volume only")
+
     latest_volume = get_volumes(args.code,latest_only=True)
-    print("returning data on only the latest volume of the specified manga")
-    #print(latest_volume)
     isBookmark(latest_volume)
+
+    logging.info("got all latest volume only")
 
   #get all volumes
   elif args.volume is None:
+    logging.info("returning all volumes from start to finish")
+
     all_volumes = get_volumes(args.code)
-    print("returning data on all volumes of the specified manga")
-    #print(all_volumes)
-    email,password = getEmailCreds(EMAIL_CRED_FILEPATH)
+
+    logging.info("got all volumes from start to finish")
 
   #get all volumes from specified to current
   else:
-    print("returning data on volumes from the specified to the most recent")
+    logging.info("returning all volumes from first to finish")
 
     #get list of volumes for this manga
     volumes = get_volumes(args.code, starting_at = args.volume)
 
-    print(volumes)
+    logging.info("got all volumes from first to finish")
